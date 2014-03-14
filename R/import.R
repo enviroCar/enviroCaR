@@ -28,10 +28,11 @@ importEnviroCar = function(serverUrl, trackIDs, bbox, timeInterval) {
 #' 
 #' @param serverUrl url to server
 #' @param trackID ids of the track that should be retrieved
+#' @param verbose print debug output
 #' @return Tracks objects for the requested tracks
 #' 
 #'
-importSingleTrack <- function(serverUrl,trackID,verbose=FALSE){
+importSingleTrack <- function(serverUrl, trackID, verbose = FALSE){
   
   singleTrackUrl=paste(serverUrl,"/tracks/",trackID,sep="")
   if(verbose)message(paste("Retrieving single track from url ",singleTrackUrl,sep=""))
@@ -52,8 +53,10 @@ importSingleTrack <- function(serverUrl,trackID,verbose=FALSE){
   # dynamic parsing of phenomenon names and units
   phenomenonsUrl = paste(serverUrl,"/phenomenons",sep="")
   phenomenons = fromJSON(getURL(phenomenonsUrl,ssl.verifypeer = FALSE))
-  colNames = str_replace_all(sapply(phenomenons[[1]], "[[", "name"), pattern=" ", repl=".")
-  colNames = str_replace_all(colNames,pattern="-",repl=".")
+  colNames = str_replace_all(sapply(phenomenons[[1]], "[[", "name"),
+  													 pattern = " ",
+  													 replacement = ".")
+  colNames = str_replace_all(colNames, pattern = "-", replacement = ".")
   resultMatrix = matrix(nrow=length(l2),ncol=length(colNames))
   dimnames(resultMatrix)[[2]]=colNames
   for (i in seq(along = l2))
@@ -87,17 +90,19 @@ importSingleTrack <- function(serverUrl,trackID,verbose=FALSE){
 #' @param serverUrl base URL of the Envirocar server
 #' @param bbox spatial bounding box
 #' @param timeInterval interval represented as list of POSIXct
+#' @param verbose print debug output
 #' @return list containing the track IDs for the specified bbox and time interval, if these are present; otherwise all track IDs are returned
 #' 
 #' 
-getTrackIDs <- function(serverUrl,bbox,timeInterval,verbose=FALSE){
+getTrackIDs <- function(serverUrl, bbox, timeInterval, verbose = FALSE){
   
   trackUrl = paste(serverUrl,"/tracks",sep="")
   
   #add bbox parameter to URL, if present
   if (!missing(bbox)){
-    bboxParam = paste("?bbox=",bbox[1,1],",",bbox[2,1],",",bbox[1,2],",",bbox[2,2],sep="")
-    trackUrl = paste(trackUrl,bboxParam,sep="")
+    bboxParam = paste("?bbox=", bbox[1,1], ",", bbox[2,1], ",", bbox[1,2], ",",
+    									bbox[2,2], sep = "")
+    trackUrl = paste(trackUrl, bboxParam, sep = "")
   }
   
   #add timeInterval parameter to URL, if present

@@ -11,6 +11,8 @@ getTrackIDs(serverUrl, bbox, timeInterval, verbose = FALSE)
 
   \item{timeInterval}{interval represented as list of
   POSIXct}
+
+  \item{verbose}{print debug output}
 }
 \value{
 list containing the track IDs for the specified bbox and

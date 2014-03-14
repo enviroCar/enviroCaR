@@ -8,11 +8,11 @@ importSingleTrack(serverUrl, trackID, verbose = FALSE)
   \item{serverUrl}{url to server}
 
   \item{trackID}{ids of the track that should be retrieved}
+
+  \item{verbose}{print debug output}
 }
 \value{
 Tracks objects for the requested tracks
-
-TODO: unclear how to encode temporalFilter!!
 }
 \description{
 Imports a single track

@@ -1,31 +1,32 @@
-\name{envirocaR-package}
-\alias{envirocaR-package}
-\alias{envirocaR}
+\name{enviroCaR-package}
+\alias{enviroCaR-package}
+\alias{enviroCaR}
+\alias{envirocar.org}
 \docType{package}
 \title{
-envirocaR-Package
+enviroCaR-Package
 }
 \description{
 The package provides basic functions to load and analyse measurements from the envirocar server.
 }
 \details{
 \tabular{ll}{
-Package: \tab envirocaR\cr
+Package: \tab enviroCaR\cr
 Type: \tab Package\cr
-Version: \tab 1.0.1\cr
-Date: \tab 2014-02-27\cr
-License: \tab What license is it under?\cr
+Version: \tab 0.1.0\cr
+Date: \tab 2014-03-14\cr
+License: \tab GPL (>= 2)\cr
 }
-~~ An overview of how to use the package, including the most important ~~
-~~ functions ~~
+
+%~~ An overview of how to use the package, including the most important ~~
+%~~ functions ~~
 }
 \author{
 Edzer Pebesma
 Christoph Stasch
 Jan Wirwahn
-Christopher Stephan
 
-Maintainer: Edzer Pebesma <yourfault@somewhere.net>
+Maintainer: Christoph Stasch <staschc@uni-muenster.de>
 }
 \references{
 Further material:
@@ -33,10 +34,10 @@ Trajectories represented by a lists of lists: http://rpubs.com/edzer/trajectorie
 Analyzing Envirocar trajectory data with R: http://rpubs.com/edzer/envirocar2
 }
 \keyword{ package }
-\seealso{
-~~ Optional links to other man pages, e.g. ~~
-~~ \code{\link[<pkg>:<pkg>-package]{<pkg>}} ~~
-}
-\examples{
-~~ simple examples of the most important functions ~~
-}
+%\seealso{
+%~~ Optional links to other man pages, e.g. ~~
+%~~ \code{\link[<pkg>:<pkg>-package]{<pkg>}} ~~
+%}
+%\examples{
+%~~ simple examples of the most important functions ~~
+%}

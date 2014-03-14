@@ -16,9 +16,6 @@ importEnviroCar(serverUrl, trackIDs, bbox, timeInterval)
 }
 \value{
 Tracks objects for the requested tracks
-
-TODO: unclear how to encode temporalFilter; should Tracks
-or TracksCollection be returned?
 }
 \description{
 Imports the envirocar data

@@ -8,8 +8,7 @@ parseLinkHeaderParam(headerParam)
   \item{headerParam}{url to server}
 }
 \value{
-Tracks objects for the requested tracks TODO: unclear how
-to encode temporalFilter!!
+Tracks objects for the requested tracks
 }
 \description{
 ugly function for parsing the Link header parameter from
