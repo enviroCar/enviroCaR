@@ -9,17 +9,16 @@
 #' 
 importEnviroCar = function(serverUrl, trackIDs, bbox, timeInterval) {
   
-  #query track IDs for bounding box and time interval; if trackIDs paramter is set, bbox and timeInterval are ignored
+  # query track IDs for bounding box and time interval; if trackIDs paramter is set, bbox and timeInterval are ignored
   if (missing(trackIDs)){
     trackIDs = getTrackIDs(serverUrl,bbox,timeInterval)
   }
   
-  #query track for each trackID
-  if (length(trackIDs)==0) {
-    tracks = TracksCollection(Tracks(list()))
-  } else {
-    tracks = TracksCollection(lapply(trackIDs,importSingleTrack,serverUrl=serverUrl))
-  }
+  # query track for each trackID
+  if(length(trackIDs)==0)
+    stop("No tracks available for the specified boundingbox and/or temporal filter.")
+  tracks = TracksCollection(lapply(trackIDs,importSingleTrack,serverUrl=serverUrl))
+  
   return(tracks)
 }
 
