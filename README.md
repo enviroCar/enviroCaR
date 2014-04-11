@@ -4,7 +4,7 @@ Import and analysis functions for the R environment for statistical computing an
 
 ## Installation
 
-The enviroCaR package is not on CRAN yet, so please download and install the package manually:
+The enviroCaR package is not on CRAN yet, so please download and install the package manually. For this to work must have both git (http://git-scm.com/downloads) and R (see documentation [here](http://cran.r-project.org/bin/windows/base/rw-FAQ.html#Rcmd-is-not-found-in-my-PATH_0021) for Windows) on your path. Then run the following commands in the command line:
 
 ```
 git clone https://github.com/enviroCar/enviroCaR
