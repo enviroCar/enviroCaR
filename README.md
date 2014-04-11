@@ -18,7 +18,7 @@ Take a look at the demos to see how to use the package:
 
 ```
 library(enviroCaR)
-demo(import)
+demo(importDemo) # there are two demos in enviroCaR: importDemo and trackAggregationDemo
 ```
 
 ## About
