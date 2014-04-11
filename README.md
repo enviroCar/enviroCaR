@@ -14,12 +14,12 @@ R CMD INSTALL enviroCaR
 
 ## Usage
 
-There are two demos, importDemo and trackAggregationDemo; 
+There are two demos (importDemo and trackAggregationDemo) 
 take a look at them to see how to use the package:
 
 ```
 library(enviroCaR)
-demo(importDemo) # 
+demo(importDemo) 
 ```
 
 ## About
