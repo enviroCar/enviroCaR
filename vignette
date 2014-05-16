@@ -270,17 +270,17 @@ spplot(sp.selected, "Consumption", colorkey = TRUE, main = "selected points acco
 Generalization as done above only retains the spatial path, but ignores time and attributes. One could rather easily implement Douglas-Peuker on higher-dimensional curves e.g. (x,y,t) or (x,y,t,Attr1,Attr2,...,Attrn) but then one needs a distance metric that combines space, time and attributes – which one would be good?
 \subsection*{What have we learned?}
 
-\item  reading trajectory data is tricky: some trajectories have no attributes for part of the points, some have a different number of attributes; this make joining them difficult (but not impossible)
-\item    subsampling, or generalizing the trajectories is easy if we only focus on space (Douglas-Peuker, rgeos::gSimplify), but needs difficult choices if time and/or attributes are taken into account too
-\item    densifying by interpolation is easy, but one needs to choose where to put extra points: equally spaced between observation points, equally distributed over space, equally distributed over time?
-\item    aggregating trajectory data leads to change of support: new values are now valid for a grid cell, or a polyline, and for a time interval; we haven't addressed colouring
+\item{1} Reading trajectory data is tricky: some trajectories have no attributes for part of the points, some have a different number of attributes; this make joining them difficult (but not impossible)
+\item{2}   Subsampling, or generalizing the trajectories is easy if we only focus on space (Douglas-Peuker, rgeos::gSimplify), but needs difficult choices if time and/or attributes are taken into account too
+\item{3} Densifying by interpolation is easy, but one needs to choose where to put extra points: equally spaced between observation points, equally distributed over space, equally distributed over time?
+\item {4} Aggregating trajectory data leads to change of support: new values are now valid for a grid cell, or a polyline, and for a time interval; we haven't addressed colouring
 
 \subsection*{Open questions}
-\enumerate Should R take care of the heterogeneity in the data served, or should the data served be consistent?
-\item How do we aggregate over multiple trajectories, e.g. when they have different sampling rates? Simply take the points, or weight by interval length or duration?
-\item How do we assign trajectories to road segments?
-\item How do we aggregate over space AND time, and how do we visualize this?
-\item How do we analyze (e.g., summarize) trajectories, within drivers and between drivers?
-\item How do we compare trajectories, how do we compare drivers?
+\item{1} Should R take care of the heterogeneity in the data served, or should the data served be consistent?
+\item{2} How do we aggregate over multiple trajectories, e.g. when they have different sampling rates? Simply take the points, or weight by interval length or duration?
+\item{3} How do we assign trajectories to road segments?
+\item{4} How do we aggregate over space AND time, and how do we visualize this?
+\item{5} How do we analyze (e.g., summarize) trajectories, within drivers and between drivers?}
+\item{6} How do we compare trajectories, how do we compare drivers?
 
 \end{document}
