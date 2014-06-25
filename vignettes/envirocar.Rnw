@@ -54,7 +54,9 @@ require(rgdal)
 @
 
 <<>>=
-layer <- readOGR(paste0(baseurl, "tracks/5207d871e4b058cd3d669afe"), layer = "OGRGeoJSON")
+trackUrl <- paste0(baseurl, "tracks/5207d871e4b058cd3d669afe")
+ogrInfo(dsn = trackUrl, layer = "OGRGeoJSON")
+layer <- readOGR(trackUrl, layer = "OGRGeoJSON")
 @
 
 <<>>=
