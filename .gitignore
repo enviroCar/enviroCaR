@@ -5,3 +5,6 @@
 *-Ex.R
 .Rproj.user
 *.Rproj
+vignettes/*.pdf
+vignettes/*.toc
+vignettes/*.tex

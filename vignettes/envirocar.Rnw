@@ -1,34 +1,61 @@
-\documentclass{article}
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenx}
+
+\usepackage[colorlinks=true,urlcolor=blue]{hyperref}
+\usepackage[english,ngerman]{babel}
+\usepackage[babel]{csquotes}
+\usepackage{soul}
+  
+\usepackage{Sweave}
+
+\title{Analyzing enviroCar Data in R}
+
+\author{
+\href{elisadeva@gmail.com}{Elisabet Adeva}
+\and
+\href{mailto:edzer.pebesma@uni-muenster.de}{Edzer Pebesma}
+\and
+\href{mailto:d.nuest@52north.org}{Daniel Nüst}
+}
+
+
 \begin{document}
-\title{Vigentte}
-\author{Analyzing Envirocar trajectory data with R}
-\section*{Edzer R Pub}
+\SweaveOpts{concordance=TRUE}
+
+% Modify figure width.
+\setkeys{Gin}{width=0.5\textwidth}
+
+\maketitle
+
+\tableofcontents
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+
+\hl{TODO: add short introduction about enviroCar project from the website}
+
+\hl{TODO: add statement about license of eC data and link to relevant website}
+
+\hl{TODO: add links to website and documentation}
+
+\hl{TODO: add enviroCar logo (locally from within package as pdf, see how it is done at https://github.com/edzer/trajectories/tree/master/vignettes}
+
+This document is based on the document \enquote{} available at \href{http://rpubs.com/edzer/enviroCar}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Importing Data}
 
 <<>>=
-url = "https://envirocar.org/api/stable/"
-require(rgdal)  # readOGR
+baseurl = "https://envirocar.org/api/stable/"
+require(rgdal)
 @
 
 <<>>=
-## Loading required package: rgdal Loading required package: sp rgdal:
-## version: 0.8-11, (SVN revision 479M) Geospatial Data Abstraction Library
-## extensions to R successfully loaded Loaded GDAL runtime: GDAL 1.10.0,
-## released 2013/04/24 Path to GDAL shared files: /usr/share/gdal/1.10 Loaded
-## PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480] Path to PROJ.4
-## shared files: (autodetected)
+layer <- readOGR(paste0(baseurl, "tracks/5207d871e4b058cd3d669afe"), layer = "OGRGeoJSON")
 @
-You can also embed plots, for example:
-<<>>=
-layer <- readOGR(url, layer = "OGRGeoJSON")
-@
-
-<<>>=
-## OGR data source with driver: GeoJSON 
-## Source: "https://giv-car.uni-muenster.de/stable/rest/tracks/5207d871e4b058cd3d669afe", layer: "OGRGeoJSON"
-## with 173 features and 3 fields
-## Feature type: wkbPoint with 2 dimensions
-@
-
 
 <<>>=
 class(layer)
@@ -37,36 +64,12 @@ class(layer)
 <<>>=
 layer[1, ]
 @
-As we can see, the attribute contains id (point nr) and time (still as factor, not as POSIXt) and the measured values are still in a JSON string that needs to be parsed. For this, we wrote an import function that converts time, parses the JSON into measured value, and adds a units attribute to the sp object:
-<<>>=
-importEnviroCar = function(file) {
-    require(rjson)  # fromJSON
-    require(maptools)  # spCbind
-    # read data as spatial object:
-    layer = readOGR(file, layer = "OGRGeoJSON")
-    # convert time from text to POSIXct:
-    layer$time = as.POSIXct(layer$time, format = "%Y-%m-%dT%H:%M:%SZ")
-    # the third column is JSON, we want it in a table (data.frame) form: 1. form
-    # a list of lists
-    l1 = lapply(as.character(layer[[3]]), fromJSON)
-    # 2. parse the $value elements in the sublist:
-    l2 = lapply(l1, function(x) as.data.frame(lapply(x, function(X) X$value)))
-    # bind these value elements, row by row, together
-    ret = do.call(rbind, l2)
-    # read the units:
-    units = lapply(l1[1], function(x) as.data.frame(lapply(x, function(X) X$unit)))
-    # add a units attribute to layer
-    layer[[3]] = NULL
-    # add the table as attributes to the spatial object
-    if (length(layer) == nrow(ret)) {
-        layer = spCbind(layer, ret)
-        attr(layer, "units") = units[[1]]
-        layer
-    } else NULL
-}
 
-url = "https://giv-car.uni-muenster.de/stable/rest/tracks/5207d871e4b058cd3d669afe"
-sp = importEnviroCar(url)
+As we can see, the attribute contains id (point nr) and time (still as factor, not as POSIXt) and the measured values are still in a JSON string that needs to be parsed. For this, we wrote an import function that converts time, parses the JSON into measured value, and adds a units attribute to the sp object:
+
+<<>>=
+require(enviroCaR)
+sp = importEnviroCar(paste0(baseurl, "tracks/5207d871e4b058cd3d669afe")
 @
 
 <<>>=
@@ -99,7 +102,9 @@ library(lattice)
 trellis.par.set(sp.theme())
 spplot(sp, "Consumption", colorkey = TRUE)
 @
-\subsection*{Interpolating a point sequence}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Interpolating a point sequence}
 Here, we interpolate the point measurements to a new set of points, using inverse distance weighting
 
 <<>>=
@@ -122,7 +127,11 @@ spplot(idw[1], colorkey = TRUE, scales = list(draw = TRUE), main = "inverse dist
 Here, the new points are evenly distributed between all existing points, meaning that with 5 times as much points, between every two points 4 points are added equidistant. This gives a new point density that resembles the original point density.
 
 Alternatively, we could generate interpolation points globally equispaced (e.g. by using spsample over a line, type = “regular”) equidistant in time, by taking time of measurement into account
-\subsection*{Aggregation of trajectory data: spatial}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Aggregation of trajectory data: spatial}
+
 We can aggregate to a 5 x 5 grid, using an arbitray aggregation function, here max
 <<>>=
 bb = bbox(sp)
@@ -135,7 +144,10 @@ and show the results, for
 spplot(sp.agg[-c(1, 2, 8)], colorkey = TRUE, sp.layout = list("sp.points", sp, 
     col = 3), main = "maximum measured value per grid cell")
 @
-\subsection*{Aggregation: temporal }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Aggregation: temporal}
 When looking at temporal variability, we see that for this trajectory the values are very unequally distrubed, indicating a break in the trajectory
 
 <<>>=
@@ -178,7 +190,9 @@ The next plot adds attribute values as colour,
 stplot(tracksCollection, attr = "speed", lwd = 3, scales = list(draw = T))
 @
 
-\subsection*{Adding a background map}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Adding a background map}
 Using package ggmap, we can add a google map background (or other background):
 
 <<>>=
@@ -217,7 +231,10 @@ setAs("SpatialPoints", "Lines", function(from) Lines(as(from, "Line"), "ID"))
 setAs("SpatialPoints", "SpatialLines", function(from) SpatialLines(list(as(from, 
     "Lines")), from@proj4string))
 @
-\subsection*{Generalizing a trajectory}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Generalizing a trajectory}
 We can generalize a trajectory using Douglas-Peuker by using gSimplify in rgeos:
 <<>>=
 sl = as(sp, "SpatialLines")
@@ -234,8 +251,12 @@ however, without warning this falsely assumes that coordinates are metric, i.e. 
 proj4string(sp)
 @
 How can we resolve this?
-\section*{Reprojecting data to UTM}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Reprojecting data to UTM}
+
 Package rgdal contains code to reproject data:
+
 <<>>=
 library(rgdal)
 utm = CRS("+proj=utm +zone=32 +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
@@ -248,6 +269,7 @@ plot(gSimplify(slT, 55), axes = TRUE)  # RIGHT: rgeos takes coords Euclidian
 plot(spTransform(sp, utm), add = T, col = "red")
 title("generalization in UTM zone 32N")
 @
+
 A plot of the (projected) simplified trajectory, here represented by a set of selected points, is created by 1. conversion to lines, 2. simplifying the line, 3. conversion to points, 4. matching to the full set of points, and 5. selection:
 
 <<>>=
@@ -266,8 +288,14 @@ sp.selected[1:3, ]
 <<>>=
 spplot(sp.selected, "Consumption", colorkey = TRUE, main = "selected points according to Douglas-Peuker")
 @
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion}
+
 \subsection*{Further problems regarding generalization}
 Generalization as done above only retains the spatial path, but ignores time and attributes. One could rather easily implement Douglas-Peuker on higher-dimensional curves e.g. (x,y,t) or (x,y,t,Attr1,Attr2,...,Attrn) but then one needs a distance metric that combines space, time and attributes – which one would be good?
+
 \subsection*{What have we learned?}
 
 \item{1} Reading trajectory data is tricky: some trajectories have no attributes for part of the points, some have a different number of attributes; this make joining them difficult (but not impossible)
