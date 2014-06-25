@@ -3,9 +3,9 @@ Type: Package
 Title: Analysis of car trajectories provided by enviroCar project
 Version: 0.1
 Date: 2014-03-14
-Author: Edzer Pebesma, Christoph Stasch, Jan Wirwahn
+Author: Edzer Pebesma, Christoph Stasch, Jan Wirwahn, Daniel Nüst, Ben Gräler
 Maintainer: Christoph Stasch <staschc@uni-muenster.de>
-Description: This package allows to retrieve car trajectories from the enviroCar project and provides some specific analysis methods.
+Description: This package allows to retrieve car trajectories from the enviroCar project (http://envirocar.org) and provides some specific analysis methods.
 License: GPL (>= 2)
 License_is_FOSS: yes
 Depends: R (>= 3.0.0),trajectories
