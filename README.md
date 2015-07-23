@@ -6,11 +6,15 @@ Import and analysis functions for the R environment for statistical computing an
 
 ### Install dependencies
 
-You need the ``trajectories`` package, which is not available on CRAN yet. Install it with
+You need the ``trajectories`` package, which is available from CRAN; on the R prompt, type
 
 ```
-git clone https://github.com/edzer/trajectories
-R CMD INSTALL trajectories
+install.packages("trajectories")
+```
+or install the development version from github:
+```
+library(devtools)
+install_gihub("edzer/trajectories")
 ```
 
 ### Install enviroCaR
