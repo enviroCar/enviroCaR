@@ -89,18 +89,30 @@ importSingleTrack <- function(serverUrl, trackID, verbose = FALSE){
 #' @param serverUrl base URL of the Envirocar server
 #' @param bbox spatial bounding box
 #' @param timeInterval interval represented as list of POSIXct
+#' @param name Username of your Account in EnviroCar in brackets *optional parameter*
+#' @param password Password of your Account in EnviroCar in brackets *optional parameter*
 #' @param verbose print debug output
 #' @return list containing the track IDs for the specified bbox and time interval, if these are present; otherwise all track IDs are returned
 #' 
 #' 
-getTrackIDs <- function(serverUrl, bbox, timeInterval, verbose = FALSE){
+
+getTrackIDs <- function(serverUrl, bbox, timeInterval, name, password, verbose = FALSE){
   
-  trackUrl = paste(serverUrl,"/tracks",sep="")
+  trackUrl = NULL
+  
+  #check if informations about the useraccount are missing.
+  #change trackUrl towards user if information is available 
+  if (missing(name)&& missing(password)){
+    trackUrl = paste(serverUrl,"/tracks",sep="")
+  }else{
+    trackUrl = paste0("https://envirocar.org/api/stable/users/" ,name, "/tracks", sep="")
+  }
+  
   
   #add bbox parameter to URL, if present
   if (!missing(bbox)){
     bboxParam = paste("?bbox=", bbox[1,1], ",", bbox[2,1], ",", bbox[1,2], ",",
-    									bbox[2,2], sep = "")
+                      bbox[2,2], sep = "")
     trackUrl = paste(trackUrl, bboxParam, sep = "")
   }
   
@@ -115,48 +127,68 @@ getTrackIDs <- function(serverUrl, bbox, timeInterval, verbose = FALSE){
   
   if (verbose) message(paste("Basic track url is ",trackUrl))
   
-  #set header parameter to retrieve header; passing header function as in RCurl example doesn't work
-  body = getURI(trackUrl,ssl.verifypeer=FALSE,header=1)
-  
-  #split header from body and select header string
-  headerAndBody = strsplit(body, split="\r\n\r\n")
-  headerString = headerAndBody[[1]][1]
-  body = headerAndBody[[1]][2]
-  
-  if(verbose) message(paste("Header is :",headerString))
-  
-  #######################
-  #check whether there are more than 100 entries (then paging is needed!)
-  header = parseHTTPHeader(headerString)
-  result = lapply(header,parseLinkHeaderParam)
-  result <- result[!sapply(result,is.null)] #remove null items
-  pagenumber=0
-  if (length(result)>0){
-    for (i in 1:length(result)){
-      if (grepl("last",result[i]$Link["relation"])){
-        pagenumber = as.numeric(result[i]$Link["pagenumber"])
-        if(verbose)message(paste("Number of pages for paging is ",pagenumber))
+  #check if informations about the useraccount are missing again.
+  #Then try reveiving trackdata from server. 
+  if (missing(name)&& missing(password)){
+    
+    #set header parameter to retrieve header; passing header function as in RCurl example doesn't work
+    body = getURI(trackUrl,ssl.verifypeer=FALSE,header=1)
+    
+    #split header from body and select header string
+    headerAndBody = strsplit(body, split="\r\n\r\n")
+    headerString = headerAndBody[[1]][1]
+    body = headerAndBody[[1]][2]
+    
+    if(verbose) message(paste("Header is :",headerString))
+    
+    #######################
+    #check whether there are more than 100 entries (then paging is needed!)
+    header = parseHTTPHeader(headerString)
+    result = lapply(header,parseLinkHeaderParam)
+    result <- result[!sapply(result,is.null)] #remove null items
+    pagenumber=0
+    if (length(result)>0){
+      for (i in 1:length(result)){
+        if (grepl("last",result[i]$Link["relation"])){
+          pagenumber = as.numeric(result[i]$Link["pagenumber"])
+          if(verbose)message(paste("Number of pages for paging is ",pagenumber))
+        }
       }
     }
-  }
-  
-  ###################
-  ##parsing of actual track IDs, if paging is true (pagenumber>0), repeat parsing for each page
-  trackIDs = parseTrackIDs(body)
-  if(pagenumber>1){
-    for (i in 2:pagenumber){
-      if(verbose)message(paste("Iterating page ", i))
-      paramString = paste ("limits=100&page=",i,sep="")
-      if (missing(bbox)&&missing(timeInterval))requestUrl=paste(trackUrl,"?",paramString,sep="")
-      else requestUrl=paste(trackUrl,"&",paramString,sep="")
-      body = getURI(requestUrl,ssl.verifypeer=FALSE)
-      currentTracks = parseTrackIDs(body)
-      if(verbose)message(paste("Current number of tracks ", length(currentTracks)," for request url ",requestUrl))
-      trackIDs = c(trackIDs,currentTracks)
-    }
-  }
-  return(trackIDs)
-}
+    
+    ###################
+    ##parsing of actual track IDs, if paging is true (pagenumber>0), repeat parsing for each page
+    trackIDs = parseTrackIDs(body)
+    if(pagenumber>1){
+      for (i in 2:pagenumber){
+        if(verbose)message(paste("Iterating page ", i))
+        paramString = paste ("limits=100&page=",i,sep="")
+        if (missing(bbox)&&missing(timeInterval))requestUrl=paste(trackUrl,"?",paramString,sep="")
+        else requestUrl=paste(trackUrl,"&",paramString,sep="")
+        body = getURI(requestUrl,ssl.verifypeer=FALSE)
+        currentTracks = parseTrackIDs(body)
+        if(verbose)message(paste("Current number of tracks ", length(currentTracks)," for request url ",requestUrl))
+        trackIDs = c(trackIDs,currentTracks)
+      }#closing for
+    }#closing if
+    return(trackIDs)
+    
+  }else {
+    #Users authorisation 
+    UrlContent <- GET(trackUrl, 
+                      authenticate(name, password, type = "basic"))
+    stop_for_status(UrlContent)
+    trackIDs <- content(UrlContent)
+    if (length(trackIDs$tracks) == 0) {
+      stop("No tracks available for the specified boundingbox and/or temporal filter.",call. = TRUE)
+    } else{
+      trackIDs <- sapply(trackIDs$tracks, "[[", "id")
+      return(trackIDs)
+      
+    }#closing else
+  }#closing else
+}#closing function
+
 
 #' ugly function for parsing the Link header parameter from the HTTP header, used for the paging mechanism
 #' 

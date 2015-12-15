@@ -6,3 +6,4 @@ import(rgdal) #readOGR
 import(stringr) #str_replace_all
 import(spacetime) #STIRDF
 import(RCurl) #getURL,parseHeader
+import(httr) #GET,authenticate,stop_for_status,content
