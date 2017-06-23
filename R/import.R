@@ -39,24 +39,35 @@ importEnviroCar = function(serverUrl, trackIDs, bbox, timeInterval) {
 #'
 importSingleTrack <- function(serverUrl, trackID, verbose = FALSE){
   
-  singleTrackUrl=paste(serverUrl,"/tracks/",trackID,sep="")
-  if(verbose)message(paste("Retrieving single track from url ",singleTrackUrl,sep=""))
+  # check wheterh baseserverUrl closes with "/"
+  n.char <- nchar(serverUrl)
+  serverUrlHasSlash <- substr(serverUrl, n.char, n.char) == "/"
+  if (serverUrlHasSlash)
+    singleTrackUrl = paste(serverUrl,"tracks/",trackID,sep="")
+  else 
+    singleTrackUrl = paste(serverUrl,"/tracks/",trackID,sep="")
+
+  if(verbose)
+    message(paste("Retrieving single track from url ",singleTrackUrl,sep=""))
   
   # read data as spatial object:
   layer = readOGR(getURL(singleTrackUrl,ssl.verifypeer = FALSE), layer = "OGRGeoJSON")
   
   # convert time from text to POSIXct:
-  layer$time = as.POSIXct(layer$time, format="%Y-%m-%dT%H:%M:%SZ")
+  layer$time = as.POSIXct(layer$time)
   # the third column is JSON, we want it in a table (data.frame) form:
   # 1. form a list of lists
   l1 = lapply(as.character(layer[[3]]), fromJSON)
   # 2. parse the $value elements in the sublist:
-  l2 = lapply(l1,
-              function(x) as.data.frame(lapply(x, function(X) X$value)))
+  l2 = lapply(l1, function(x) as.data.frame(lapply(x, function(X) X$value)))
   # create a matrix with all columns and then convert it to a data frame
   # thanks to Kristina Helle!
   # dynamic parsing of phenomenon names and units
-  phenomenonsUrl = paste(serverUrl,"/phenomenons",sep="")
+  if (serverUrlHasSlash)
+    phenomenonsUrl = paste(serverUrl,"phenomenons/",sep="")
+  else 
+    phenomenonsUrl = paste(serverUrl,"/phenomenons/",sep="")
+
   phenomenons = fromJSON(getURL(phenomenonsUrl,ssl.verifypeer = FALSE))
   colNames = str_replace_all(sapply(phenomenons[[1]], "[[", "name"),
   													 pattern = " ",

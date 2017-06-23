@@ -35,11 +35,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 
-\hl{TODO: add short introduction about enviroCar project from the website}
+\subsection{The enviroCar Platform}
+enviroCar is an open platform for Citizen Science projects in the field of sustainable mobility. Citizens, scientists, traffic planners and industry collect and analyze car data and share their findings.
+
+It’s simple, it’s easy, it’s fun - it’s open source! Access the car’s sensors with your Android smartphone and a Bluetooth OBD-II adapter. The free enviroCar app provides information about your car and your driving characteristics. By uploading the data to the enviroCar server you agree to publish it as anonymized open data. As a scientist or traffic expert, you access the data easily via the enviroCar website and use it to answer questions in the field of mobility and environment. Use ArcGIS online to tell the community about your projects and to share your ideas, insights and conclusions with people all over the world.
+
+See \ahref{envirocar.org}{envirocar.org} for further details.
 
 \hl{TODO: add statement about license of eC data and link to relevant website}
 
-\hl{TODO: add links to website and documentation}
 
 \hl{TODO: add enviroCar logo (locally from within package as pdf, see how it is done at https://github.com/edzer/trajectories/tree/master/vignettes}
 
@@ -51,12 +55,14 @@ This document is based on the document \enquote{} available at \href{http://rpub
 <<>>=
 baseurl = "https://envirocar.org/api/stable/"
 require(rgdal)
+require(RCurl)
 @
 
 <<>>=
-trackUrl <- paste0(baseurl, "tracks/5207d871e4b058cd3d669afe")
-ogrInfo(dsn = trackUrl, layer = "OGRGeoJSON")
-layer <- readOGR(trackUrl, layer = "OGRGeoJSON")
+trackUrl <- paste0(baseurl, "tracks/59301d7c268d1b08a4a9e38b")
+trackGeoJSON <- httpGET(trackUrl)
+ogrInfo(dsn = trackGeoJSON[1], layer = "OGRGeoJSON")
+layer <- readOGR(trackGeoJSON, layer = "OGRGeoJSON")
 @
 
 <<>>=
@@ -70,39 +76,117 @@ layer[1, ]
 As we can see, the attribute contains id (point nr) and time (still as factor, not as POSIXt) and the measured values are still in a JSON string that needs to be parsed. For this, we wrote an import function that converts time, parses the JSON into measured value, and adds a units attribute to the sp object:
 
 <<>>=
+require(trajectories)
 require(enviroCaR)
-sp = importEnviroCar(paste0(baseurl, "tracks/5207d871e4b058cd3d669afe")
+tracksCol <- importEnviroCar(baseurl, "5207d871e4b058cd3d669afe")
 @
 
 <<>>=
-sp[1, ]
-@
-
-<<>>=
-attr(sp, "units")
+library(spacetime)
+str(tracksCol[1]@tracks[[1]], 3)
+plot(tracksCol[1]@tracks[[1]])
+stplot(tracksCol)
 @
 
 <<>>=
 library(lattice)
+library(spacetime)
 trellis.par.set(sp.theme())
-spplot(sp, "Consumption", colorkey = TRUE)
-@
-
-<<>>=
-boxplot(1:10~rep(1:2,5))
-plot(x, y)
+stplot(tracksCol, attr = "speed", lwd = 3, scales = list(draw = T))
 @
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Adding a background map}
+Using package ggmap, we can add a google map background (or other background):
+
 <<>>=
-attr(sp, "units")
+bb = matrix(NA, 2, 2)
+bb[2, ] = c(51.94, 51.985)
+bb[1, ] = c(7.58, 7.67)
+library(ggmap)
 @
 
 
 <<>>=
-library(lattice)
-trellis.par.set(sp.theme())
-spplot(sp, "Consumption", colorkey = TRUE)
+map4ao <- get_map(location = as.vector(bb))
+@
+
+
+<<>>=
+# maptype = 'satellite', scale=2, zoom=4) Read the attributes to pass them
+# to grid.raster
+bbMap <- attr(map4ao, "bb")
+latCenter <- with(bbMap, ll.lat + ur.lat)/2
+lonCenter <- with(bbMap, ll.lon + ur.lon)/2
+height <- with(bbMap, ur.lat - ll.lat)
+width <- with(bbMap, ur.lon - ll.lon)
+## Another component of the sp.layout in spplot
+sp.raster <- list("grid.raster", map4ao, x = lonCenter, y = latCenter, width = width, 
+    height = height, default.units = "native")
+stplot(tracksCol, scales = list(draw = TRUE), sp.layout = sp.raster, 
+    col = "red", lwd = 2, main = "google map background")
+@
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Generalizing a trajectory}
+We can generalize a trajectory using Douglas-Peuker by using gSimplify in rgeos:
+<<>>=
+sl = as(tracksCol, "SpatialLines")
+library(rgeos)
+@
+
+<<>>=
+plot(gSimplify(sl, 5e-04), axes = TRUE)  # WRONG: rgeos takes lat/long as Euclidian coords
+plot(sp, add = T, col = "red")
+title("generalization in Long/Lat (wrong!)")
+@
+however, without warning this falsely assumes that coordinates are metric, i.e. in a Euclidian system. They are not:
+<<>>=
+proj4string(sp)
+@
+How can we resolve this?
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Reprojecting data to UTM}
+
+Package rgdal contains code to reproject data:
+
+<<>>=
+library(rgdal)
+utm = CRS("+proj=utm +zone=32 +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+slT = spTransform(sl, utm)
+@
+
+<<>>=
+plot(gSimplify(slT, 55), axes = TRUE)  # RIGHT: rgeos takes coords Euclidian
+plot(spTransform(sp, utm), add = T, col = "red")
+title("generalization in UTM zone 32N")
+@
+
+A plot of the (projected) simplified trajectory, here represented by a set of selected points, is created by 1. conversion to lines, 2. simplifying the line, 3. conversion to points, 4. matching to the full set of points, and 5. selection:
+
+<<>>=
+sl.simplified = gSimplify(slT, 55)  # 2
+sp.simplified = as(sl.simplified, "SpatialPoints")  # 3
+sp = spTransform(sp, utm)
+sel = zerodist2(sp.simplified, sp, 0.001)[, 2]  # 4
+sp.selected = sp[sel, ]  # 5
+length(sp.selected)
+@
+
+<<>>=
+sp.selected[1:3, ]
+@
+
+<<>>=
+spplot(sp.selected, "Consumption", colorkey = TRUE, main = "selected points according to Douglas-Peuker")
+@
+
+<<>>=
+sp <- as(tracksCol, "SpatialPointsDataFrame")
+spplot(sp, "Consumption", colorkey=T)
 @
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -138,12 +222,12 @@ We can aggregate to a 5 x 5 grid, using an arbitray aggregation function, here m
 <<>>=
 bb = bbox(sp)
 grd = GridTopology(bb[, 1], apply(bb, 1, diff)/5, c(5, 5))
-sp.agg = aggregate(sp[-1], SpatialGrid(grd, crs), max)
+sp.agg = aggregate(sp[,-1], SpatialGrid(grd, crs), max)
 @
 and show the results, for 
 
 <<>>=
-spplot(sp.agg[-c(1, 2, 8)], colorkey = TRUE, sp.layout = list("sp.points", sp, 
+spplot(sp.agg[c("Rpm", "Speed", "CO2", "Consumption")], colorkey = TRUE, sp.layout = list("sp.points", sp, 
     col = 3), main = "maximum measured value per grid cell")
 @
 
@@ -153,8 +237,8 @@ spplot(sp.agg[-c(1, 2, 8)], colorkey = TRUE, sp.layout = list("sp.points", sp,
 When looking at temporal variability, we see that for this trajectory the values are very unequally distrubed, indicating a break in the trajectory
 
 <<>>=
-plot(y = sp$Consumption, x = sp$time)
-title("Fuel consumption over time")
+plot(y = sp$Consumption, x = sp$time, 
+     main="Fuel consumption over time")
 @
 We can also aggregate to time intervals, e.g. 10 min values. For this, we will convert the points to a zoo object (time series)
 
@@ -173,144 +257,9 @@ After having played with spatial objects (package sp) and temporal objects (pack
 
 <<>>=
 library(spacetime)
-stidf = STIDF(geometry(sp), sp$time, sp@data)
+stidf = as(tracksCol, "STIDF")
 stplot(geometry(stidf), main = "trajectory points, cut in 6 time slices with equal amount of points")
 @
 plots the geometry of the spatial points, over time, cutting time in six parts with an equal number of observations.
 
 
-Trajectory data can be represented as Track object,
-<<>>=
-track = Track(stidf)
-tracks = Tracks(list(tr1 = track))
-tracksCollection = TracksCollection(list(tr = tracks))
-stplot(tracksCollection)
-@
-
-The next plot adds attribute values as colour, 
-<<>>=
-stplot(tracksCollection, attr = "speed", lwd = 3, scales = list(draw = T))
-@
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Adding a background map}
-Using package ggmap, we can add a google map background (or other background):
-
-<<>>=
-bb = matrix(NA, 2, 2)
-bb[2, ] = c(51.94, 51.985)
-bb[1, ] = c(7.58, 7.67)
-library(ggmap)
-@
-
-
-<<>>=
-map4ao <- get_map(location = as.vector(bb))
-@
-
-
-<<>>=
-# maptype = 'satellite', scale=2, zoom=4) Read the attributes to pass them
-# to grid.raster
-bbMap <- attr(map4ao, "bb")
-latCenter <- with(bbMap, ll.lat + ur.lat)/2
-lonCenter <- with(bbMap, ll.lon + ur.lon)/2
-height <- with(bbMap, ur.lat - ll.lat)
-width <- with(bbMap, ur.lon - ll.lon)
-## Another component of the sp.layout in spplot
-sp.raster <- list("grid.raster", map4ao, x = lonCenter, y = latCenter, width = width, 
-    height = height, default.units = "native")
-stplot(tracksCollection, scales = list(draw = TRUE), sp.layout = sp.raster, 
-    col = "red", lwd = 2, main = "google map background")
-@
-
-The following code allows conversion from SpatialPoints into SpatialLines, and has been added to sp:
-
-<<>>=
-setAs("SpatialPoints", "Line", function(from) Line(coordinates(from)))
-setAs("SpatialPoints", "Lines", function(from) Lines(as(from, "Line"), "ID"))
-setAs("SpatialPoints", "SpatialLines", function(from) SpatialLines(list(as(from, 
-    "Lines")), from@proj4string))
-@
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Generalizing a trajectory}
-We can generalize a trajectory using Douglas-Peuker by using gSimplify in rgeos:
-<<>>=
-sl = as(sp, "SpatialLines")
-library(rgeos)
-@
-
-<<>>=
-plot(gSimplify(sl, 5e-04), axes = TRUE)  # WRONG: rgeos takes lat/long as Euclidian coords
-plot(sp, add = T, col = "red")
-title("generalization in Long/Lat (wrong!)")
-@
-however, without warning this falsely assumes that coordinates are metric, i.e. in a Euclidian system. They are not:
-<<>>=
-proj4string(sp)
-@
-How can we resolve this?
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Reprojecting data to UTM}
-
-Package rgdal contains code to reproject data:
-
-<<>>=
-library(rgdal)
-utm = CRS("+proj=utm +zone=32 +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
-slT = spTransform(sl, utm)
-5e-04 * 110000  # approximate meters per degree latitude
-@
-
-<<>>=
-plot(gSimplify(slT, 55), axes = TRUE)  # RIGHT: rgeos takes coords Euclidian
-plot(spTransform(sp, utm), add = T, col = "red")
-title("generalization in UTM zone 32N")
-@
-
-A plot of the (projected) simplified trajectory, here represented by a set of selected points, is created by 1. conversion to lines, 2. simplifying the line, 3. conversion to points, 4. matching to the full set of points, and 5. selection:
-
-<<>>=
-sl.simplified = gSimplify(slT, 55)  # 2
-sp.simplified = as(sl.simplified, "SpatialPoints")  # 3
-sp = spTransform(sp, utm)
-sel = zerodist2(sp.simplified, sp, 0.001)[, 2]  # 4
-sp.selected = sp[sel, ]  # 5
-length(sp.selected)
-@
-
-<<>>=
-sp.selected[1:3, ]
-@
-
-<<>>=
-spplot(sp.selected, "Consumption", colorkey = TRUE, main = "selected points according to Douglas-Peuker")
-@
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Discussion}
-
-\subsection*{Further problems regarding generalization}
-Generalization as done above only retains the spatial path, but ignores time and attributes. One could rather easily implement Douglas-Peuker on higher-dimensional curves e.g. (x,y,t) or (x,y,t,Attr1,Attr2,...,Attrn) but then one needs a distance metric that combines space, time and attributes – which one would be good?
-
-\subsection*{What have we learned?}
-
-\item{1} Reading trajectory data is tricky: some trajectories have no attributes for part of the points, some have a different number of attributes; this make joining them difficult (but not impossible)
-\item{2}   Subsampling, or generalizing the trajectories is easy if we only focus on space (Douglas-Peuker, rgeos::gSimplify), but needs difficult choices if time and/or attributes are taken into account too
-\item{3} Densifying by interpolation is easy, but one needs to choose where to put extra points: equally spaced between observation points, equally distributed over space, equally distributed over time?
-\item {4} Aggregating trajectory data leads to change of support: new values are now valid for a grid cell, or a polyline, and for a time interval; we haven't addressed colouring
-
-\subsection*{Open questions}
-\item{1} Should R take care of the heterogeneity in the data served, or should the data served be consistent?
-\item{2} How do we aggregate over multiple trajectories, e.g. when they have different sampling rates? Simply take the points, or weight by interval length or duration?
-\item{3} How do we assign trajectories to road segments?
-\item{4} How do we aggregate over space AND time, and how do we visualize this?
-\item{5} How do we analyze (e.g., summarize) trajectories, within drivers and between drivers?}
-\item{6} How do we compare trajectories, how do we compare drivers?
-
-\end{document}
