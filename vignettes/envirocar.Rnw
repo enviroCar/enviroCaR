@@ -40,7 +40,7 @@ enviroCar is an open platform for Citizen Science projects in the field of susta
 
 It’s simple, it’s easy, it’s fun - it’s open source! Access the car’s sensors with your Android smartphone and a Bluetooth OBD-II adapter. The free enviroCar app provides information about your car and your driving characteristics. By uploading the data to the enviroCar server you agree to publish it as anonymized open data. As a scientist or traffic expert, you access the data easily via the enviroCar website and use it to answer questions in the field of mobility and environment. Use ArcGIS online to tell the community about your projects and to share your ideas, insights and conclusions with people all over the world.
 
-See \ahref{envirocar.org}{envirocar.org} for further details.
+See \href{envirocar.org}{envirocar.org} for further details.
 
 \hl{TODO: add statement about license of eC data and link to relevant website}
 
@@ -61,8 +61,7 @@ require(RCurl)
 <<>>=
 trackUrl <- paste0(baseurl, "tracks/59301d7c268d1b08a4a9e38b")
 trackGeoJSON <- httpGET(trackUrl)
-ogrInfo(dsn = trackGeoJSON[1], layer = "OGRGeoJSON")
-layer <- readOGR(trackGeoJSON, layer = "OGRGeoJSON")
+layer <- readOGR(trackGeoJSON, layer = "OGRGeoJSON", verbose=FALSE)
 @
 
 <<>>=
@@ -128,6 +127,10 @@ stplot(tracksCol, scales = list(draw = TRUE), sp.layout = sp.raster,
     col = "red", lwd = 2, main = "google map background")
 @
 
+<<>>=
+sp <- as(tracksCol, "SpatialPointsDataFrame")
+spplot(sp, "Consumption", colorkey=T)
+@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Generalizing a trajectory}
@@ -184,11 +187,6 @@ sp.selected[1:3, ]
 spplot(sp.selected, "Consumption", colorkey = TRUE, main = "selected points according to Douglas-Peuker")
 @
 
-<<>>=
-sp <- as(tracksCol, "SpatialPointsDataFrame")
-spplot(sp, "Consumption", colorkey=T)
-@
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Interpolating a point sequence}
 Here, we interpolate the point measurements to a new set of points, using inverse distance weighting
@@ -236,30 +234,29 @@ spplot(sp.agg[c("Rpm", "Speed", "CO2", "Consumption")], colorkey = TRUE, sp.layo
 \subsection{Aggregation: temporal}
 When looking at temporal variability, we see that for this trajectory the values are very unequally distrubed, indicating a break in the trajectory
 
-<<>>=
+<<fig=TRUE>>=
 plot(y = sp$Consumption, x = sp$time, 
      main="Fuel consumption over time")
 @
+
 We can also aggregate to time intervals, e.g. 10 min values. For this, we will convert the points to a zoo object (time series)
 
 <<>>=
 library(zoo)
-@
-
-
-<<>>=
 xx = zoo(sp$Consumption, sp$time)
 plot(aggregate(xx, cut(sp$time, "5 min"), mean))
 points(xx)
 title("10-minute mean Consumption (l/h)")
 @
+
 After having played with spatial objects (package sp) and temporal objects (package zoo), we can convert these data into spatio-temporal objects (package spacetime):
 
-<<>>=
+<<fig=TRUE>>=
 library(spacetime)
 stidf = as(tracksCol, "STIDF")
-stplot(geometry(stidf), main = "trajectory points, cut in 6 time slices with equal amount of points")
+print(stplot(geometry(stidf), main = "trajectory points, cut in 6 time slices with equal amount of points"))
 @
+
 plots the geometry of the spatial points, over time, cutting time in six parts with an equal number of observations.
 
-
+\end{document}

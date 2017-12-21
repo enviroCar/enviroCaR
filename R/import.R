@@ -13,7 +13,7 @@
 #' tracks=importEnviroCar(serverUrl,bbox=boundingbox)
 #' }
 #' 
-importEnviroCar = function(serverUrl, trackIDs, bbox, timeInterval) {
+importEnviroCar = function(serverUrl, trackIDs, bbox, timeInterval, verbose=FALSE, ssl.verifypeer=TRUE) {
   
   # query track IDs for bounding box and time interval; if trackIDs paramter is set, bbox and timeInterval are ignored
   if (missing(trackIDs)){
@@ -23,7 +23,9 @@ importEnviroCar = function(serverUrl, trackIDs, bbox, timeInterval) {
   # query track for each trackID
   if(length(trackIDs)==0)
     stop("No tracks available for the specified boundingbox and/or temporal filter.")
-  tracks = TracksCollection(lapply(trackIDs,importSingleTrack,serverUrl=serverUrl))
+  if (verbose)
+    message(paste("Retrieving ",length(trackIDs), " tracks from url: ", serverUrl, sep=""))
+  tracks = TracksCollection(lapply(trackIDs,importSingleTrack,serverUrl=serverUrl, verbose, ssl.verifypeer))
   
   return(tracks)
 }
@@ -34,10 +36,11 @@ importEnviroCar = function(serverUrl, trackIDs, bbox, timeInterval) {
 #' @param serverUrl url to server
 #' @param trackID ids of the track that should be retrieved
 #' @param verbose print debug output
+#' @param ssl.verifypeer arguemnt passed through to RCurl::getURL
 #' @return Tracks objects for the requested tracks
 #' 
 #'
-importSingleTrack <- function(serverUrl, trackID, verbose = FALSE){
+importSingleTrack <- function(serverUrl, trackID, verbose = FALSE, ssl.verifypeer=TRUE){
   
   # check wheterh baseserverUrl closes with "/"
   n.char <- nchar(serverUrl)
@@ -51,7 +54,8 @@ importSingleTrack <- function(serverUrl, trackID, verbose = FALSE){
     message(paste("Retrieving single track from url ",singleTrackUrl,sep=""))
   
   # read data as spatial object:
-  layer = readOGR(getURL(singleTrackUrl,ssl.verifypeer = FALSE), layer = "OGRGeoJSON")
+  layer = readOGR(getURL(singleTrackUrl, ssl.verifypeer = FALSE),
+                  layer = "OGRGeoJSON", verbose = verbose)
   
   # convert time from text to POSIXct:
   layer$time = as.POSIXct(layer$time)
@@ -68,7 +72,7 @@ importSingleTrack <- function(serverUrl, trackID, verbose = FALSE){
   else 
     phenomenonsUrl = paste(serverUrl,"/phenomenons/",sep="")
 
-  phenomenons = fromJSON(getURL(phenomenonsUrl,ssl.verifypeer = FALSE))
+  phenomenons = fromJSON(getURL(phenomenonsUrl, ssl.verifypeer = ssl.verifypeer))
   colNames = str_replace_all(sapply(phenomenons[[1]], "[[", "name"),
   													 pattern = " ",
   													 replacement = ".")

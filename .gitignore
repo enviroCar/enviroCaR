@@ -9,3 +9,4 @@ vignettes/*.toc
 vignettes/*.tex
 .RData
 *.kml
+vignettes/envirocar.synctex.gz
