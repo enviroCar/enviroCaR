@@ -80,18 +80,18 @@ require(enviroCaR)
 tracksCol <- importEnviroCar(baseurl, "5207d871e4b058cd3d669afe")
 @
 
-<<>>=
+<<fig=TRUE>>=
 library(spacetime)
 str(tracksCol[1]@tracks[[1]], 3)
 plot(tracksCol[1]@tracks[[1]])
-stplot(tracksCol)
+print(stplot(tracksCol))
 @
 
-<<>>=
+<<fig=TRUE>>=
 library(lattice)
 library(spacetime)
 trellis.par.set(sp.theme())
-stplot(tracksCol, attr = "speed", lwd = 3, scales = list(draw = T))
+print(stplot(tracksCol, attr = "speed", lwd = 3, scales = list(draw = T)))
 @
 
 
@@ -112,7 +112,7 @@ map4ao <- get_map(location = as.vector(bb))
 @
 
 
-<<>>=
+<<fig=TRUE>>=
 # maptype = 'satellite', scale=2, zoom=4) Read the attributes to pass them
 # to grid.raster
 bbMap <- attr(map4ao, "bb")
@@ -123,13 +123,13 @@ width <- with(bbMap, ur.lon - ll.lon)
 ## Another component of the sp.layout in spplot
 sp.raster <- list("grid.raster", map4ao, x = lonCenter, y = latCenter, width = width, 
     height = height, default.units = "native")
-stplot(tracksCol, scales = list(draw = TRUE), sp.layout = sp.raster, 
-    col = "red", lwd = 2, main = "google map background")
+print(stplot(tracksCol, scales = list(draw = TRUE), sp.layout = sp.raster, 
+    col = "red", lwd = 2, main = "google map background"))
 @
 
-<<>>=
+<<fig=TRUE>>=
 sp <- as(tracksCol, "SpatialPointsDataFrame")
-spplot(sp, "Consumption", colorkey=T)
+print(spplot(sp, "Consumption", colorkey=T))
 @
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -140,7 +140,7 @@ sl = as(tracksCol, "SpatialLines")
 library(rgeos)
 @
 
-<<>>=
+<<fig=TRUE>>=
 plot(gSimplify(sl, 5e-04), axes = TRUE)  # WRONG: rgeos takes lat/long as Euclidian coords
 plot(sp, add = T, col = "red")
 title("generalization in Long/Lat (wrong!)")
@@ -162,7 +162,7 @@ utm = CRS("+proj=utm +zone=32 +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs
 slT = spTransform(sl, utm)
 @
 
-<<>>=
+<<fig=TRUE>>=
 plot(gSimplify(slT, 55), axes = TRUE)  # RIGHT: rgeos takes coords Euclidian
 plot(spTransform(sp, utm), add = T, col = "red")
 title("generalization in UTM zone 32N")
@@ -183,8 +183,8 @@ length(sp.selected)
 sp.selected[1:3, ]
 @
 
-<<>>=
-spplot(sp.selected, "Consumption", colorkey = TRUE, main = "selected points according to Douglas-Peuker")
+<<fig=TRUE>>=
+print(spplot(sp.selected, "Consumption", colorkey = TRUE, main = "selected points according to Douglas-Peuker"))
 @
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -205,8 +205,8 @@ idw = idw(Consumption ~ 1, sp, newpts)
 @
 We can plot this sequence by
 
-<<>>=
-spplot(idw[1], colorkey = TRUE, scales = list(draw = TRUE), main = "inverse distance interpolated Fuel Consumption values")
+<<fig=TRUE>>=
+print(spplot(idw[1], colorkey = TRUE, scales = list(draw = TRUE), main = "inverse distance interpolated Fuel Consumption values"))
 @
 Here, the new points are evenly distributed between all existing points, meaning that with 5 times as much points, between every two points 4 points are added equidistant. This gives a new point density that resembles the original point density.
 
@@ -224,9 +224,9 @@ sp.agg = aggregate(sp[,-1], SpatialGrid(grd, crs), max)
 @
 and show the results, for 
 
-<<>>=
-spplot(sp.agg[c("Rpm", "Speed", "CO2", "Consumption")], colorkey = TRUE, sp.layout = list("sp.points", sp, 
-    col = 3), main = "maximum measured value per grid cell")
+<<fig=TRUE>>=
+print(spplot(sp.agg[c("Rpm", "Speed", "CO2", "Consumption")], colorkey = TRUE, sp.layout = list("sp.points", sp, 
+    col = 3), main = "maximum measured value per grid cell"))
 @
 
 
@@ -241,7 +241,7 @@ plot(y = sp$Consumption, x = sp$time,
 
 We can also aggregate to time intervals, e.g. 10 min values. For this, we will convert the points to a zoo object (time series)
 
-<<>>=
+<<fig=TRUE>>=
 library(zoo)
 xx = zoo(sp$Consumption, sp$time)
 plot(aggregate(xx, cut(sp$time, "5 min"), mean))
