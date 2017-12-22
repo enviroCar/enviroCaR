@@ -77,7 +77,7 @@ As we can see, the attribute contains id (point nr) and time (still as factor, n
 <<>>=
 require(trajectories)
 require(enviroCaR)
-tracksCol <- importEnviroCar(baseurl, "5207d871e4b058cd3d669afe")
+tracksCol <- importEnviroCar(baseurl, "5207d871e4b058cd3d669afe", ssl.verifypeer=FALSE)
 @
 
 <<fig=TRUE>>=

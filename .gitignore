@@ -10,3 +10,5 @@ vignettes/*.tex
 .RData
 *.kml
 vignettes/envirocar.synctex.gz
+vignettes/cache/
+vignettes/analysis-traj-eC.synctex.gz

@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[a4]{article}
 
 \usepackage[utf8]{inputenx}
 
@@ -16,7 +16,6 @@
 }
 
 \begin{document}
-\SweaveOpts{concordance=TRUE}
 
 \maketitle
 
@@ -26,27 +25,90 @@
 
 Using the R-package \href{enviroCaR}{https://github.com/enviroCar/enviroCaR}
 
-<<cache=TRUE>>=
+<<echo=FALSE>>=
+options(width=100)
+@
+
+<<cache=TRUE, warning=FALSE>>=
 library(enviroCaR)
 
 serverUrl = "https://envirocar.org/api/stable"
 boundingbox = matrix(c(7.5,51.9,7.7,52.1),
                      ncol=2,
                      dimnames=list(c("x","y"), c("min","max")))
-interval = xts::.parseISO8601('2017-01-01T00:00/2017-05-31T23:59')
+interval = xts::.parseISO8601('2017-04-01T00:00/2017-05-31T23:59')
 
-trackIDs = getTrackIDs(serverUrl,bbox = boundingbox, timeInterval = interval)
+trackIDs = getTrackIDs(serverUrl,
+                       bbox = boundingbox, 
+                       timeInterval = interval)
 
 # how many tracks intersect with the space-time window?
 length(trackIDs)
 
 # fetch all these tracks from the enviroCar server
-trCol = importEnviroCar(serverUrl, trackIDs = trackIDs)
+trCol <- importEnviroCar(serverUrl, trackIDs)
+
+fstTracks <- trCol@tracksCollection[[1]]
+
+fstTrack <- fstTracks@tracks[[1]]
+@
+
+Investigating the structure of the tracks collection reveals that tracks element of the tracks colection consists of a single track correspondsing to one actual trackID from the enviroCar Server.
+
+<<>>=
+str(trCol, 2)
+str(fstTracks, 2)
+str(fstTrack, 2)
+@
+
+\section{Visulising the tracks}
+
+A single Track is a set of (possibly marked) ordered points in space and time $\mathbb{R}^2 \times \mathbb{R}$. The \verb?trajectories? class \verb?Track? also features a slot \verb?connections? that contains information about e.g.\, the traveld distance between two fixes. The slot \verb?data? refers to the marks of the fixes like \verb?GPS.bearing\ and a like. A series of \verb?Track? objects can be summarised as a \verb?Tracks? object that contains a slot \verb?trackData? summarising a couple of properties of each track in a data.frame. In the default enviroCar case, a \verb?Tracks? object only contains a single \verb?Track? object and the \verb?trackData? slot only a single row. A series of \verb?Tracks? objects can be wrapped in a \verb?TracksCollection? that also adds a data slot called \verb?tracksCollectionData? summarizing the data from the contained \verb?Tracks? objects. 
+
+Plotting these structures essentially also means a projection of something 3D+ to the 2D surface. This can be obtained in different ways and different projections will be useful for different applications.
+
+\subsection{As spatial projection}
+
+An immediate idea when thinking of trajectories is to plot its footprint, i.e.\,the travelled path. This corresponds to map the trajectoies to the connections between two fixes. Typically, straight conections are assumed between two fixes, but especially for low sampling rates thsi might be a very strong simplification.
+
+<<echo=FALSE>>=
+setAs("Track", "SpatialLines", function(from) {
+  SpatialLines(lapply(2:nrow(from@sp@coords)-1, 
+                      function(ri) Lines(list(Line(from@sp@coords[ri+(0:1),])), ID =ri)))
+})
+
+setAs("Track", "SpatialLinesDataFrame", function(from) {
+  sl <- SpatialLines(lapply(2:nrow(from@sp@coords)-1, 
+                            function(ri) Lines(list(Line(from@sp@coords[ri+(0:1),])), ID =ri)))
+  addAttrToGeom(sl, from@connections, FALSE)
+})
+  
+setMethod("spplot", "Track", function(obj, ...) {
+  spplot(as(obj, "SpatialLinesDataFrame"), ...)
+})
+
+@
+
+<<fig=TRUE>>=
+library(sp)
+plot(fstTrack@connections$duration)
+
+spplot(fstTrack, "speed", scales=list(arrows=FALSE))
+@
+
+<<echo=FALSE>>=
+setAs("Tracks", "SpatialLinesDataFrame", function(from) {
+  sll <- lapply(fstTracks@tracks, function(x) as(x, "SpatialLinesDataFrame"))
+  addAttrToGeom(sl, from@connections, FALSE)
+})
+  
+spplot.Track <- function(x, y, ...) {
+  spplot(as(x, "SpatialLinesDataFrame"), y, ...)
+} 
 @
 
 
-\section{Visulising the tracks}
-\subsection{As spatial projection}
+
 \subsection{As a distance-time projection}
 \subsection{In a space-time cube}
 

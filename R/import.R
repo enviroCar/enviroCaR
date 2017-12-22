@@ -54,8 +54,10 @@ importSingleTrack <- function(serverUrl, trackID, verbose = FALSE, ssl.verifypee
     message(paste("Retrieving single track from url ",singleTrackUrl,sep=""))
   
   # read data as spatial object:
-  layer = readOGR(getURL(singleTrackUrl, ssl.verifypeer = FALSE),
+  content <- getURL(singleTrackUrl, ssl.verifypeer = FALSE)
+  layer = readOGR(content,
                   layer = "OGRGeoJSON", verbose = verbose)
+  props <- rjson::fromJSON(content)$properties
   
   # convert time from text to POSIXct:
   layer$time = as.POSIXct(layer$time)
@@ -87,6 +89,8 @@ importSingleTrack <- function(serverUrl, trackID, verbose = FALSE, ssl.verifypee
   units <- sapply(phenomenons[[1]], "[[", "unit")
   names(units)=colNames
 
+  # parse additional information from geoJSON: car, id, ...
+  
   layer[[3]] = NULL
   # add the table as attributes to the spatial object 
   if (length(layer) == nrow(result)) {
@@ -95,10 +99,13 @@ importSingleTrack <- function(serverUrl, trackID, verbose = FALSE, ssl.verifypee
     #filtering of duplicate measurements in a single track
     redundant = which(diff(as.numeric(index(stidf@time)))==0)
     if(length(redundant)!=0){
+      message(paste0(length(redundant), " identical time stamps have been removed."))
       stidf = stidf[-redundant,]
     }
     track = Track(stidf)
     attr(track, "units") = units
+    attr(track, "trackID") = trackID
+    attr(track, "sensor") = props$sensor
     tracks = Tracks(list(track)) #TODO: group single tracks 
     return(tracks)
   } else
@@ -128,7 +135,6 @@ getTrackIDs <- function(serverUrl, bbox, timeInterval, name, password, verbose =
   }else{
     trackUrl = paste0("https://envirocar.org/api/stable/users/" ,name, "/tracks", sep="")
   }
-  
   
   #add bbox parameter to URL, if present
   if (!missing(bbox)){
@@ -238,5 +244,5 @@ parseLinkHeaderParam <- function(headerParam){
 #' @return list containing the parsed trackIDs
 #'
 parseTrackIDs<-function(jsonBody){
-  sapply(fromJSON(jsonBody)$tracks,function(x) return(x$id))
+  sapply(fromJSON(jsonBody)$tracks, function(x) return(x$id))
 }
